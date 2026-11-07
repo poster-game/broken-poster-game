@@ -5,105 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>broken-poster-game</title>
     <style>
-        body { background-color: #1e1e24; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: flex-start; padding: 20px; margin: 0; min-height: 100vh; }
+        body { background-color: #1e1e24; color: #ffffff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: flex-start; padding: 20px; margin: 0; min-height: 100vh; }
         .container { width: 100%; max-width: 700px; background-color: #2d3436; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-top: 20px; }
         h1 { color: #a29bfe; text-align: center; margin-bottom: 5px; font-size: 28px; }
         h2 { text-align: center; color: #b2bec3; font-size: 18px; margin-bottom: 25px; }
         .mafia-card { background-color: #353b48; padding: 20px; border-radius: 10px; border-left: 6px solid #6c5ce7; margin-bottom: 20px; font-size: 16px; line-height: 1.6; }
-        .timer-box { background-color: #ffeaa7; color: #2d3436; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; margin-bottom: 20px; font-size: 18px; }
-        .btn { background-color: #6c5ce7; color: white; border: 2px solid #a29bfe; padding: 15px 20px; font-size: 18px; font-weight: bold; border-radius: 10px; width: 100%; margin-bottom: 12px; cursor: pointer; transition: 0.3s; text-align: left; }
+        .input-field { width: 100%; padding: 15px; font-size: 18px; border-radius: 10px; border: 2px solid #6c5ce7; background-color: #1e1e24; color: white; margin-bottom: 15px; box-sizing: border-box; }
+        .btn { background-color: #6c5ce7; color: white; border: 2px solid #a29bfe; padding: 15px 20px; font-size: 18px; font-weight: bold; border-radius: 10px; width: 100%; margin-bottom: 12px; cursor: pointer; transition: 0.3s; text-align: center; }
         .btn:hover { background-color: #00cec9; border-color: #81ecec; transform: scale(1.02); }
-        .info-text { background-color: #55efc4; color: #2d3436; padding: 15px; border-radius: 8px; font-weight: bold; margin-top: 15px; display: none; }
-        .error-text { background-color: #ff7675; color: white; padding: 15px; border-radius: 8px; font-weight: bold; margin-top: 15px; display: none; }
-        .clue-text { background-color: #74b9ff; color: #2d3436; padding: 15px; border-radius: 8px; margin-top: 10px; display: none; font-style: italic; }
+        .status { text-align: center; font-weight: bold; color: #ffeaa7; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div id="timer" class="timer-box" style="display:none;">⏳ Оставшееся время расследования: 05:00</div>
-    <div id="screen-start">
-        <h1>🔮 Интерактивная игра: Сломанный плакат</h1>
-        <h2>Психологический эксперимент для защиты индивидуального проекта</h2>
+    <!-- ЭКРАН ПОДКЛЮЧЕНИЯ -->
+    <div id="screen-lobby">
+        <h1>🔮 Сломанный плакат: Онлайн Мафия</h1>
+        <h2>Многопользовательская комната для всего класса</h2>
         <div class="mafia-card">
-            <h4 style="margin-top:0; color:#ff7675; font-size: 18px;">🕵️‍♂️ Внимание, город засыпает... Просыпается МАФИЯ!</h4>
-            Тайные <b>Исказители смыслов</b> заколдовали современные мотивирующие плакаты школы и города...
+            Введите любое имя и создайте комнату или введите код существующей комнаты, чтобы играть вместе с друзьями с разных устройств!
         </div>
-        <button class="btn" style="text-align:center; background-color:#6c5ce7;" onclick="startGame()">🔥 ВКЛЮЧИТЬ МАГИЧЕСКИЙ ВЗГЛЯД И НАЧАТЬ</button>
+        <input type="text" id="username-input" class="input-field" placeholder="Ваше игровое имя">
+        <input type="text" id="room-input" class="input-field" placeholder="Код комнаты (например: 9А)">
+        <button class="btn" onclick="connectToGame()">🔗 ПОДКЛЮЧИТЬСЯ К ИГРЕ</button>
+        <div id="status-text" class="status"></div>
     </div>
+
+    <!-- ЭКРАН ОЖИДАНИЯ ИГРОКОВ -->
+    <div id="screen-wait" style="display:none;">
+        <h1>⏳ Ожидание запуска игры</h1>
+        <h2 id="room-display">Комната: </h2>
+        <div class="mafia-card">
+            Вы успешно зашли в онлайн-лобби. Ждем, пока все 50 одноклассников подключатся!
+        </div>
+        <div id="players-list" style="font-size: 18px; line-height: 2; margin-bottom: 20px;"></div>
+        <button id="start-btn" class="btn" style="background-color: #10ac84; display:none;" onclick="sendStartGame()">🔥 НАЧАТЬ БИТВУ ДЛЯ ВСЕХ</button>
+    </div>
+
+    <!-- ИГРОВОЙ ЭКРАН -->
     <div id="screen-game" style="display:none;">
-        <h1 style="font-size:24px;">🕵️‍♂️ Идет расследование...</h1>
-        <h3 id="case-title" style="color:#74b9ff;"></h3>
-        <div class="mafia-card" style="border-left-color:#74b9ff;"><span style="color:#55efc4;">📋 <b>Оригинальный посыл:</b></span> <span id="case-orig"></span></div>
-        <div class="mafia-card" style="border-left-color:#ff7675;"><span style="color:#ff7675;">❌ <b>После чар Мафии:</b></span> <span id="case-corr"></span></div>
-        <h4 style="margin-bottom:10px;">🗳️ Голосование зала! Какую уловку применила Мафия?:</h4>
+        <h1 style="font-size:24px;">🕵️‍♂️ Идет общее онлайн-расследование...</h1>
+        <div class="mafia-card" style="border-left-color:#ff7675;">
+            <span style="color:#ff7675;">❌ <b>Заколдованный плакат на экране у всех:</b></span> <br>
+            <span id="corrupted-text" style="font-size: 20px; font-weight: bold;"></span>
+        </div>
+        <h4>🗳️ Обсудите с классом в чате и нажмите правильный ответ:</h4>
         <div id="options-box"></div>
-        <div id="feedback-success" class="info-text">🌟 ПРАВИЛЬНО! Мафия разоблачена чарами логики!</div>
-        <div id="feedback-error" class="error-text">❌ Мимо! Мафия запутала следствие, но магический взгляд раскрывает истину:</div>
-        <div id="feedback-clue" class="clue-text"></div>
-        <button id="next-btn" class="btn" style="text-align:center; margin-top:20px; display:none; background-color:#00cec9; color:#2d3436;" onclick="nextCase()">Следующий случай ➡️</button>
-    </div>
-    <div id="screen-final" style="display:none;">
-        <h1>🏆 РЕЗУЛЬТАТЫ СЛЕДСТВИЯ</h1>
-        <h2>Мафия Исказителей разгромлена силой критического мышления!</h2>
-        <div class="timer-box" style="background-color:#55efc4; font-size:20px;" id="final-score"></div>
-        <button class="btn" style="text-align:center;" onclick="resetGame()">🔄 Начать новую игру</button>
     </div>
 </div>
+
 <script>
-    let currentCase = 0, score = 0, timerInterval, timeLeft = 300;
-    const cases = [
-        { orig: "«Береги природу — разделяй отходы правильно!»", corr: "«Разделяй доходы правильно — забирай всё себе!»", options: ["Мафия перекрасила фон", "Мафия подменила буквы в словах 🌟", "Сбой принтера"], correct: 1, clue: "Картинка осталась прежней — визуальный образ сильнее слов!" },
-        { orig: "«Книга — лучший гаджет! Читай!»", corr: "«Книга — лишний гаджет! Иди спать!»", options: ["Мафия изменила одно слово 🌟", "Плакат от мебельной фабрики", "Старый плакат"], correct: 0, clue: "Всего одна буква изменила мотивацию." },
-        { orig: "«Здоровый сон — залог успеха!»", corr: "«Здоровый слон — залог успеха!»", options: ["Мафия добавила абсурд и числа 🌟", "Плакат для зоопарка", "Ошибка дизайнера"], correct: 0, clue: "Логика зала мгновенно раскрыла обман." }
-    ];
-    function startTimer() {
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) { clearInterval(timerInterval); showFinal(); }
-            let mins = Math.floor(timeLeft / 60), secs = timeLeft % 60;
-            document.getElementById('timer').innerText = `⏳ Время до конца расследования: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }, 1000);
+    let ws;
+    let myName = "";
+    let myRoom = "";
+
+    function connectToGame() {
+        myName = document.getElementById("username-input").value.trim();
+        myRoom = document.getElementById("room-input").value.trim();
+        
+        if(!myName || !myRoom) {
+            alert("Пожалуйста, введите имя и код комнаты!");
+            return;
+        }
+
+        document.getElementById("status-text").innerText = "Соединение с сервером...";
+        
+        // Временный тестовый адрес сервера (в следующем шаге заменим на постоянный)
+        ws = new WebSocket(`wss://broken-poster-server.zeabur.app/ws/${myRoom}/${myName}`);
+
+        ws.onopen = () => {
+            document.getElementById("screen-lobby").style.display = "none";
+            document.getElementById("screen-wait").style.display = "block";
+            document.getElementById("room-display").innerText = `Комната: ${myRoom}`;
+        };
+
+        ws.onmessage = (event) => {
+            let data = JSON.parse(event.data);
+            
+            if(data.type === "players_update") {
+                let pList = document.getElementById("players-list");
+                pList.innerHTML = "<b>Игроки в комнате:</b><br>" + data.players.map(p => `👤 ${p}`).join("<br>");
+                // Первый вошедший игрок становится лидером и может запустить игру
+                if(data.players[0] === myName) {
+                    document.getElementById("start-btn").style.display = "block";
+                }
+            }
+            
+            if(data.type === "start_game") {
+                document.getElementById("screen-wait").style.display = "none";
+                document.getElementById("screen-game").style.display = "block";
+                document.getElementById("corrupted-text").innerText = data.corrupted;
+                
+                let oBox = document.getElementById("options-box");
+                oBox.innerHTML = "";
+                data.options.forEach((opt, idx) => {
+                    let btn = document.createElement("button");
+                    btn.className = "btn";
+                    btn.innerText = opt;
+                    btn.onclick = () => sendAnswer(idx);
+                    oBox.appendChild(btn);
+                });
+            }
+        };
+
+        ws.onerror = () => {
+            document.getElementById("status-text").innerText = "Ошибка подключения к серверу. Попробуйте позже!";
+        };
     }
-    function startGame() {
-        document.getElementById('screen-start').style.display = 'none';
-        document.getElementById('screen-game').style.display = 'block';
-        document.getElementById('timer').style.display = 'block';
-        startTimer(); loadCase();
+
+    function sendStartGame() {
+        ws.send(JSON.stringify({action: "start"}));
     }
-    function loadCase() {
-        ['feedback-success', 'feedback-error', 'feedback-clue', 'next-btn'].forEach(id => document.getElementById(id).style.display = 'none');
-        let c = cases[currentCase];
-        document.getElementById('case-title').innerText = `Случай №${currentCase + 1} из 3`;
-        document.getElementById('case-orig').innerText = c.orig;
-        document.getElementById('case-corr').innerText = c.corr;
-        let oBox = document.getElementById('options-box'); oBox.innerHTML = '';
-        c.options.forEach((opt, idx) => {
-            let btn = document.createElement('button');
-            btn.className = 'btn'; btn.innerText = opt;
-            btn.onclick = () => checkAnswer(idx);
-            oBox.appendChild(btn);
-        });
-    }
-    function checkAnswer(chosen) {
-        let c = cases[currentCase];
-        Array.from(document.getElementById('options-box').getElementsByTagName('button')).forEach(b => b.disabled = true);
-        if (chosen === c.correct) { score++; document.getElementById('feedback-success').style.display = 'block'; }
-        else { document.getElementById('feedback-error').style.display = 'block'; }
-        let clue = document.getElementById('feedback-clue'); clue.innerText = c.clue; clue.style.display = 'block';
-        document.getElementById('next-btn').style.display = 'block';
-    }
-    function nextCase() { currentCase < cases.length ? (currentCase++, loadCase()) : showFinal(); }
-    function showFinal() {
-        clearInterval(timerInterval);
-        document.getElementById('screen-game').style.display = 'none';
-        document.getElementById('timer').style.display = 'none';
-        document.getElementById('screen-final').style.display = 'block';
-        document.getElementById('final-score').innerText = `📊 Разоблачено уловок Мафии: ${score} из 3`;
-    }
-    function resetGame() {
-        clearInterval(timerInterval); currentCase = 0; score = 0; timeLeft = 300;
-        document.getElementById('screen-final').style.display = 'none';
-        document.getElementById('screen-start').style.display = 'block';
+
+    function sendAnswer(idx) {
+        alert("Ответ отправлен на сервер! Ожидаем остальных игроков...");
     }
 </script>
 </body>
