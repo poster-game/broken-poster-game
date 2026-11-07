@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>broken-poster-game</title>
+    <style>
+        body {
+            background-color: #1e1e24;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background-color: #2d3436;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            margin-top: 20px;
+        }
+        h1 { color: #a29bfe; text-align: center; margin-bottom: 5px; font-size: 28px; }
+        h2 { text-align: center; color: #b2bec3; font-size: 18px; margin-bottom: 25px; }
+        .mafia-card {
+            background-color: #353b48;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 6px solid #6c5ce7;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .timer-box {
+            background-color: #ffeaa7;
+            color: #2d3436;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .btn {
+            background-color: #6c5ce7;
+            color: white;
+            border: 2px solid #a29bfe;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            width: 100%;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: left;
+        }
+        .btn:hover {
+            background-color: #00cec9;
+            border-color: #81ecec;
+            transform: scale(1.02);
+        }
+        .info-text { background-color: #00cec9; color: #2d3436; padding: 15px; border-radius: 8px; font-weight: bold; margin-top: 15px; display: none; }
+        .error-text { background-color: #ff7675; color: white; padding: 15px; border-radius: 8px; font-weight: bold; margin-top: 15px; display: none; }
+        .clue-text { background-color: #74b9ff; color: #2d3436; padding: 15px; border-radius: 8px; margin-top: 10px; display: none; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="timer" class="timer-box" style="display:none;">⏳ Оставшееся время расследования: 05:00</div>
+    
+    <!-- ЭКРАН 1: СТАРТ -->
+    <div id="screen-start">
+        <h1>🔮 Интерактивная игра: Сломанный плакат</h1>
+        <h2>Психологический эксперимент для защиты индивидуального проекта</h2>
+        <div class="mafia-card">
+            <h4 style="margin-top:0; color:#ff7675; font-size: 18px;">🕵️‍♂️ Внимание, город засыпает... Просыпается МАФИЯ!</h4>
+            Тайные <b>Исказители смыслов</b> заколдовали современные мотивирующие плакаты школы и города. Они переврали тексты про экологию, чтение и здоровье, чтобы запутать людей! Но у нас есть <b>Магический взгляд логики</b>.<br><br>
+            <b>Правила:</b> Играем ровно 5 минут. Ограничений по игрокам нет — голосует весь зал одновременно! Мы должны включить критическое мышление и разоблачить уловки мафии!
+        </div>
+        <button class="btn" style="text-align:center; background-color:#6c5ce7;" onclick="startGame()">🔥 ВКЛЮЧИТЬ МАГИЧЕСКИЙ ВЗГЛЯД И НАЧАТЬ</button>
+    </div>
+
+    <!-- ЭКРАН 2: ИГРА -->
+    <div id="screen-game" style="display:none;">
+        <h1 style="font-size:24px;">🕵️‍♂️ Идет расследование...</h1>
+        <h3 id="case-title" style="color:#74b9ff;"></h3>
+        <div class="mafia-card" style="border-left-color:#74b9ff;">
+            <span style="color:#55efc4;">📋 <b>Оригинальный посыл:</b></span> <span id="case-orig"></span>
+        </div>
+        <div class="mafia-card" style="border-left-color:#ff7675;">
+            <span style="color:#ff7675;">❌ <b>После чар Мафии:</b></span> <span id="case-corr"></span>
+        </div>
+        <h4 style="margin-bottom:10px;">🗳️ Голосование зала! Какую уловку применила Мафия?:</h4>
+        <div id="options-box"></div>
+        
+        <div id="feedback-success" class="info-text">🌟 ПРАВИЛЬНО! Мафия разоблачена чарами логики!</div>
+        <div id="feedback-error" class="error-text">❌ Мимо! Мафия запутала следствие, но магический взгляд раскрывает истину:</div>
+        <div id="feedback-clue" class="clue-text"></div>
+        
+        <button id="next-btn" class="btn" style="text-align:center; margin-top:20px; display:none; background-color:#00cec9; color:#2d3436;" onclick="nextCase()">Следующий случай ➡️</button>
+    </div>
+
+    <!-- ЭКРАН 3: ФИНАЛ -->
+    <div id="screen-final" style="display:none;">
+        <h1>🏆 РЕЗУЛЬТАТЫ СЛЕДСТВИЯ</h1>
+        <h2>Мафия Исказителей разгромлена силой критического мышления!</h2>
+        <div class="timer-box" style="background-color:#55efc4; font-size:20px;" id="final-score"></div>
+        <div class="mafia-card" style="border-left-color: #00CEC9;">
+            <h3>🧠 Главный вывод для защиты индивидуального проекта:</h3>
+            Наша игра со множеством зрителей одновременно доказала: в современном мире текстовая информация легко уязвима для искажений (эффект "сломанного телефона"). Текст можно легко переписать или подделать.<br><br>
+            Но почему <b>социальный плакат имеет огромную общественную и культурную значимость</b>? Потому что его <b>визуальный образ (дизайн, графика, цвет) невозможно мгновенно подменить</b>. Позитивный и яркий рисунок плаката врезается в память человека напрямую, формируя правильные ценности (ЗОЖ, экология, культура), минуя текстовые искажения. Это делает плакат важнейшим и вечным инструментом визуальной коммуникации в обществе!
+        </div>
+        <button class="btn" style="text-align:center;" onclick="resetGame()">🔄 Начать новую игру</button>
+    </div>
+</div>
+
+<script>
+    let currentCase = 0;
+    let score = 0;
+    let timerInterval;
+    let timeLeft = 300;
+
+    const cases = [
+        {
+            orig: "«Береги природу — разделяй отходы правильно!» (Тема: Экология и чистая планета)",
+            corr: "«Разделяй доходы правильно — забирай всё себе!»",
+            options: [
+                "Мафия полностью перекрасила фон плаката",
+                "Мафия подменила буквы в словах, превратив заботу о планете в эгоизм 🌟",
+                "Текст изменился из-за сбоя принтера"
+            ],
+            correct: 1,
+            clue: "Анализ 'Магического взгляда': Картинка с зелёным деревом и контейнерами осталась прежней! Изменился только текст. Это доказывает: визуальный образ на плакате сильнее слов, ведь люди всё равно понимают, что речь об экологии!"
+        },
+        {
+            orig: "«Книга — лучший гаджет! Читай и развивай свой разум!» (Тема: Образование и чтение)",
+            corr: "«Книга — лишний гаджет! Закрой её и иди спать!»",
+            options: [
+                "Мафия совершила тонкое буквенное искажение всего одного слова 🌟",
+                "Это официальный плакат от мебельной фабрики",
+                "Плакат просто слишком старый"
+            ],
+            correct: 0,
+            clue: "Анализ 'Магического взгляда': Мафия изменила всего одну букву («лучший» на «лишний»), чтобы полностью сломать мотивацию. Это подтверждает, как важно защищать смысл информации!"
+        },
+        {
+            orig: "«Здоровый сон — залог успеха на уроках! Спи не менее 8 часов!» (Тема: Здоровье и ЗОЖ)",
+            corr: "«Здоровый слон — залог успеха на дорогах! Спи не менее 100 часов!»",
+            options: [
+                "Мафия добавила абсурдные элементы и запутала цифры 🌟",
+                "Это плакат для водителей в зоопарке",
+                "Текст перепутал сам дизайнер"
+            ],
+            correct: 0,
+            clue: "Анализ 'Магического взгляда': Исказители превратили важный совет по здоровью в шутку. Но благодаря логике зала, обман мгновенно раскрыт!"
+        }
+    ];
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                showFinal();
+            }
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            document.getElementById('timer').innerText = `⏳ Время до конца расследования: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function startGame() {
+        document.getElementById('screen-start').style.display = 'none';
+        document.getElementById('screen-game').style.display = 'block';
+        document.getElementById('timer').style.display = 'block';
+        startTimer();
+        loadCase();
+    }
+
+    function loadCase() {
+        document.getElementById('feedback-success').style.display = 'none';
+        document.getElementById('feedback-error').style.display = 'none';
+        document.getElementById('feedback-clue').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        let c = cases[currentCase];
+        document.getElementById('case-title').innerText = `Случай №${currentCase + 1} из 3`;
+        document.getElementById('case-orig').innerText = c.orig;
+        document.getElementById('case-corr').innerText = c.corr;
+        
+        let oBox = document.getElementById('options-box');
+        oBox.innerHTML = '';
+        c.options.forEach((opt, idx) => {
+            let btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(idx);
+            oBox.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(chosen) {
+let c = cases[currentCase];
+let buttons = document.getElementById('options-box').getElementsByTagName('button');
+for(let b of buttons) b.disabled = true;
+if(chosen === c.correct) {
+score++;
+document.getElementById('feedback-success').style.display = 'block';
+} else {
+document.getElementById('feedback-error').style.display = 'block';
+}
+let clue = document.getElementById('feedback-clue');
+clue.innerText = c.clue;
+clue.style.display = 'block';
+document.getElementById('next-btn').style.display = 'block';
+}
+function nextCase() {
+currentCase++;
+if(currentCase < cases.length) {
+loadCase();
+} else {
+showFinal();
+}
+}
+function showFinal() {
+clearInterval(timerInterval);
+document.getElementById('screen-game').style.display = 'none';
+document.getElementById('timer').style.display = 'none';
+document.getElementById('screen-final').style.display = 'block';
+document.getElementById('final-score').innerText = 📊 Разоблачено уловок Мафии: ${score} из 3;
+}
+function resetGame() {
+currentCase = 0;
+score = 0;
+timeLeft = 300;
+document.getElementById('screen-final').style.display = 'none';
+document.getElementById('screen-start').style.display = 'block';
+}
