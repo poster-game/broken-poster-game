@@ -1,89 +1,52 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 import json
 
 app = FastAPI()
-
-# Разрешаем подключение с любых устройств и доменов
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Хранилище активных комнат и подключений игроков
-# Структура: { room_id: { username: websocket } }
-rooms = {}
-
-# Заготовки игровых раундов
-GAME_DATA = {
-    "corrupted": "«Разделяй доходы правильно — забирай всё себе!»",
-    "options": [
-        "Мафия полностью перекрасила фон плаката",
-        "Мафия подменила буквы в словах, превратив экологию в эгоизм 🌟",
-        "Текст изменился из-за сбоя принтера"
-    ]
-}
-
-@app.get("/")
-def read_root():
-    return {"status": "Сетевой сервер Сломанного Плаката активен!"}
+rooms = {} # База данных комнат в реальном времени: {room_id: {"players": {}, "preset": "mafia", "board": [""]*9}}
 
 @app.websocket("/ws/{room_id}/{username}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
     await websocket.accept()
-    
-    # Инициализируем комнату, если её ещё нет
     if room_id not in rooms:
-        rooms[room_id] = {}
-        
-    # Добавляем игрока в комнату
-    rooms[room_id][username] = websocket
+        rooms[room_id] = {"players": {}, "preset": "mafia", "board": [""] * 9, "turn": "X"}
     
-    # Рассылаем всем в комнате обновленный список игроков
-    await broadcast_players(room_id)
-    
+    rooms[room_id]["players"][username] = websocket
+    await sync_room(room_id)
+
     try:
         while True:
-            # Ждем команды от клиента (например, запуск игры лидером лобби)
             data = await websocket.receive_text()
-            message = json.loads(data)
-            
-            if message.get("action") == "start":
-                # Отправляем всем устройствам в комнате команду на старт игры и первый раунд
-                start_packet = {
-                    "type": "start_game",
-                    "corrupted": GAME_DATA["corrupted"],
-                    "options": GAME_DATA["options"]
-                }
-                await broadcast_to_room(room_id, start_packet)
+            msg = json.loads(data)
+            room = rooms[room_id]
+
+            if msg["action"] == "preset":
+                room["preset"] = msg["preset"]
+                await sync_room(room_id)
                 
+            elif msg["action"] == "move":
+                idx = msg["index"]
+                if room["board"][idx] == "" and room["preset"] == "mafia":
+                    room["board"][idx] = room["turn"]
+                    room["turn"] = "O" if room["turn"] == "X" else "X"
+                    await sync_room(room_id)
+                    
     except WebSocketDisconnect:
-        # Убираем игрока из подключений при отключении интернета
-        if room_id in rooms and username in rooms[room_id]:
-            del rooms[room_id][username]
-            if not rooms[room_id]:
+        if room_id in rooms and username in rooms[room_id]["players"]:
+            del rooms[room_id]["players"][username]
+            if not rooms[room_id]["players"]:
                 del rooms[room_id]
             else:
-                await broadcast_players(room_id)
+                await sync_room(room_id)
 
-async def broadcast_players(room_id: str):
-    """Отправка списка всех подключенных игроков текущей комнаты"""
+async def sync_room(room_id: str):
     if room_id in rooms:
+        room = rooms[room_id]
         packet = {
-            "type": "players_update",
-            "players": list(rooms[room_id].keys())
+            "type": "sync",
+            "players": list(room["players"].keys()),
+            "preset": room["preset"],
+            "board": room["board"]
         }
-        await broadcast_to_room(room_id, packet)
-
-async def broadcast_to_room(room_id: str, packet: dict):
-    """Отправка сообщения абсолютно всем устройствам внутри одной комнаты"""
-    if room_id in rooms:
-        payload = json.dumps(packet)
-        for ws in rooms[room_id].values():
-            try:
-                await ws.send_text(payload)
-            except:
-                pass
+        for ws in room["players"].values():
+            try: await ws.send_text(json.dumps(packet))
+            except: pass
