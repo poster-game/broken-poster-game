@@ -36,8 +36,9 @@
 <div id="auth-block" class="lobby-container" style="max-width: 400px; text-align: center;">
     <h2>Вход в Сломанный Плакат</h2>
     <input type="text" id="username" class="input-field" placeholder="Твой ник">
-    <input type="text" id="roomid" class="input-field" placeholder="Код комнаты (например: 9А)">
-    <button class="action-btn btn-start" style="width:100%;" onclick="initNetwork()">Войти в лобби</button>
+    <div style="font-size: 13px; margin-bottom: 5px; text-align: left; color: #ffeaa7;">Код комнаты (сгенерирован автоматически):</div>
+    <input type="text" id="roomid" class="input-field" placeholder="Код комнаты" style="font-weight: bold; text-align: center; background-color: #eee;">
+    <button class="action-btn btn-start" style="width:100%; margin-top: 10px;" onclick="initNetwork()">Войти в лобби</button>
 </div>
 
 <!-- ЭКРАН ИГРОВОГО ЛОББИ -->
@@ -65,22 +66,26 @@
         </div>
     </div>
     <div class="footer-actions">
-        <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
+        <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ ДЛЯ КЛАССА</button>
         <button class="action-btn btn-start" onclick="alert('Игра запущена! Перейдите во вкладку КРЕСТИКИ для прохождения физминутки.')">🚀 НАЧАТЬ ИГРУ</button>
     </div>
 </div>
 
 <script>
     let myName = "", myRoom = "", ws;
-    // Адрес вашего стабильного и запущенного сервера на PythonAnywhere
-    const SERVER_URL = "vlad1.pythonanywhere.com"; 
+    const SERVER_URL = "://pythonanywhere.com"; 
+
+    // АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ КОДА КОМНАТЫ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+    window.onload = function() {
+        const randomNum = Math.floor(100 + Math.random() * 900); // Случайное число от 100 до 999
+        document.getElementById("roomid").value = `ROOM-${randomNum}`;
+    };
 
     function initNetwork() {
         myName = document.getElementById("username").value.trim();
         myRoom = document.getElementById("roomid").value.trim();
         if(!myName || !myRoom) return alert("Пожалуйста, заполните все поля!");
 
-        // Подключение к вашему Python-серверу через сетевой протокол веб-сокетов
         ws = new WebSocket(`wss://${SERVER_URL}/ws/${myRoom}/${myName}`);
         
         ws.onopen = () => {
@@ -92,7 +97,6 @@
         ws.onmessage = (e) => {
             let msg = JSON.parse(e.data);
             if(msg.type === "sync") {
-                // Мгновенная сетевая синхронизация списка игроков у всех на экранах
                 document.getElementById("players-list").innerHTML = msg.players.map(p => `<div class="player-item">👤 ${p}</div>`).join("");
                 updatePresetUI(msg.preset);
                 if(msg.preset === "mafia") renderTicTacToe(msg.board);
@@ -100,7 +104,7 @@
         };
 
         ws.onerror = () => {
-            alert("Ошибка сети! Проверьте, что сервер на PythonAnywhere запущен и перезагружен через кнопку Reload.");
+            alert("Ошибка сети! Проверьте, что сервер на PythonAnywhere запущен.");
         };
     }
 
@@ -114,7 +118,7 @@
             document.getElementById("p-dnd").classList.add("active");
             zone.innerHTML = `<div class="mafia-card">⚔️ <b>Режим D&D Плакаты:</b> Битва классов запущена! Ждите, пока Ведущий распределит свитки рекурсии.</div>`;
         } else if(preset === "maf") {
-            document.getElementById("p-p-maf").classList.add("active");
+            document.getElementById("p-maf").classList.add("active");
             zone.innerHTML = `<div class="mafia-card">🕵️‍♂️ <b>Режим Мафия Исказителей:</b> Роли распределены вслепую. Обсуждайте уловки на плакатах в общем чате онлайн-урока!</div>`;
         }
     }
@@ -139,8 +143,10 @@
     }
     
     function copyLink() { 
-        navigator.clipboard.writeText(`https://github.io`); 
-        alert("Официальная ссылка на лобби скопирована! Отправьте её классу в чат."); 
+        // Копируем ссылку вместе со сгенерированным кодом комнаты, чтобы друзьям не пришлось вводить его вручную!
+        const inviteText = `Привет! Заходи в мою игру «Сломанный плакат». Ссылка: https://github.io Код нашей комнаты: ${myRoom}`;
+        navigator.clipboard.writeText(inviteText); 
+        alert(`Текст с кодом комнаты (${myRoom}) скопирован! Отправьте его классу в чат Сферума.`); 
     }
 </script>
 </body>
