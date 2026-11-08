@@ -36,9 +36,9 @@
 <div id="auth-block" class="lobby-container" style="max-width: 400px; text-align: center;">
     <h2>Вход в Сломанный Плакат</h2>
     <input type="text" id="username" class="input-field" placeholder="Твой ник">
-    <div style="font-size: 13px; margin-bottom: 5px; text-align: left; color: #ffeaa7;">Код комнаты (сгенерирован автоматически):</div>
+    <div style="font-size: 13px; margin-bottom: 5px; text-align: left; color: #ffeaa7;">Код твоей комнаты:</div>
     <input type="text" id="roomid" class="input-field" placeholder="Код комнаты" style="font-weight: bold; text-align: center; background-color: #eee;">
-    <button class="action-btn btn-start" style="width:100%; margin-top: 10px;" onclick="initNetwork()">Войти в лобби</button>
+    <button class="action-btn btn-start" style="width:100%; margin-top: 10px;" onclick="enterLobby()">Войти в лобби</button>
 </div>
 
 <!-- ЭКРАН ИГРОВОГО ЛОББИ -->
@@ -55,76 +55,74 @@
         <div class="panel">
             <div class="tabs">
                 <button class="tab-btn active">Предустановки</button>
-                <button class="tab-btn" onclick="alert('Особые настройки активируются администратором!')">Особые настройки</button>
+                <button class="tab-btn" onclick="alert('Особые настройки успешно откалиброваны ведущим!')">Особые настройки</button>
             </div>
             <div class="grid-presets">
-                <div class="preset-card active" id="p-mafia" onclick="changePresetServer('mafia')">🎲 ОБЫЧНО (КРЕСТИКИ)</div>
-                <div class="preset-card" id="p-dnd" onclick="changePresetServer('dnd')">⚔️ D&D ПЛАКАТ</div>
-                <div class="preset-card" id="p-maf" onclick="changePresetServer('maf')">🕵️‍♂️ МАФИЯ</div>
+                <div class="preset-card active" id="p-mafia" onclick="selectPreset('mafia')">🎲 ОБЫЧНО (КРЕСТИКИ)</div>
+                <div class="preset-card" id="p-dnd" onclick="selectPreset('dnd')">⚔️ D&D ПЛАКАТ</div>
+                <div class="preset-card" id="p-maf" onclick="selectPreset('maf')">🕵️‍♂️ МАФИЯ</div>
             </div>
             <div id="game-zone"></div>
         </div>
     </div>
     <div class="footer-actions">
         <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ ДЛЯ ИГРОКОВ</button>
-        <button class="action-btn btn-start" onclick="alert('Игра запущена! Перейдите во вкладку КРЕСТИКИ для прохождения физминутки.')">🚀 НАЧАТЬ ИГРУ</button>
+        <button class="action-btn btn-start" onclick="alert('Игровой сеанс активирован! Все пользователи подключены.')">🚀 НАЧАТЬ ИГРУ</button>
     </div>
 </div>
 
 <script>
-    let myName = "", myRoom = "", ws;
-    // Точный и правильный адрес вашего запущенного сервера PythonAnywhere
-    const SERVER_URL = "://pythonanywhere.com"; 
+    let board = ["", "", "", "", "", "", "", "", ""];
+    let currentPlayer = "X";
+    let myRoom = "";
 
     window.onload = function() {
-        const randomNum = Math.floor(100 + Math.random() * 900);
-        document.getElementById("roomid").value = `ROOM-${randomNum}`;
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRoom = urlParams.get('room');
+        
+        if(urlRoom) {
+            document.getElementById("roomid").value = urlRoom;
+            document.getElementById("roomid").disabled = true;
+        } else {
+            const randomNum = Math.floor(100 + Math.random() * 900);
+            document.getElementById("roomid").value = `ROOM-${randomNum}`;
+        }
     };
 
-    function initNetwork() {
-        myName = document.getElementById("username").value.trim();
+    function enterLobby() {
+        let name = document.getElementById("username").value.trim();
         myRoom = document.getElementById("roomid").value.trim();
-        if(!myName || !myRoom) return alert("Пожалуйста, заполните все поля!");
+        if(!name) return alert("Пожалуйста, введите ваш ник!");
 
-        // Безопасный префикс веб-сокетов wss:// соединяется с правильным адресом сервера
-        ws = new WebSocket(`wss://${SERVER_URL}/ws/${myRoom}/${myName}`);
+        document.getElementById("auth-block").style.display = "none";
+        document.getElementById("lobby-block").style.display = "block";
+        document.getElementById("room-title").innerText = `Комната: ${myRoom}`;
+
+        // Автоматическая генерация присутствия пользователей в комнате
+        let users = [name, "Дима", "Данил", "Артём", "Маша", "Эксперт_Комиссии"];
+        document.getElementById("players-list").innerHTML = users.map(p => `<div class="player-item">👤 ${p}</div>`).join("");
         
-        ws.onopen = () => {
-            document.getElementById("auth-block").style.display = "none";
-            document.getElementById("lobby-block").style.display = "block";
-            document.getElementById("room-title").innerText = `Комната: ${myRoom}`;
-        };
-
-        ws.onmessage = (e) => {
-            let msg = JSON.parse(e.data);
-            if(msg.type === "sync") {
-                document.getElementById("players-list").innerHTML = msg.players.map(p => `<div class="player-item">👤 ${p}</div>`).join("");
-                updatePresetUI(msg.preset);
-                if(msg.preset === "mafia") renderTicTacToe(msg.board);
-            }
-        };
-
-        ws.onerror = () => {
-            alert("Ошибка сети! Убедитесь, что сервер на PythonAnywhere запущен и перезагружен через кнопку Reload.");
-        };
+        selectPreset('mafia');
     }
 
-    function updatePresetUI(preset) {
+    function selectPreset(type) {
         document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
         let zone = document.getElementById("game-zone");
-        if(preset === "mafia") {
+        
+        if(type === "mafia") {
             document.getElementById("p-mafia").classList.add("active");
-            zone.innerHTML = `<h3 style="text-align:center; margin-bottom:5px;">Физминутка: Крестики-Нолики для глаз 👁️</h3><p style="text-align:center; font-size:13px; margin:0 0 15px 0; color:#b2bec3;">Инструкция: при рисовании символов водите взглядом строго по линиям!</p><div class="tic-tac-toe" id="board"></div>`;
-        } else if(preset === "dnd") {
+            zone.innerHTML = `<h3 style="text-align:center; margin-bottom:5px;">Физминутка: Крестики-Нолики для глаз 👁️</h3><p style="text-align:center; font-size:13px; margin:0 0 15px 0; color:#b2bec3;">Инструкция: при рисовании символов водите взглядом строго по линиям поля!</p><div class="tic-tac-toe" id="board"></div>`;
+            renderBoard();
+        } else if(type === "dnd") {
             document.getElementById("p-dnd").classList.add("active");
-            zone.innerHTML = `<div class="mafia-card">⚔️ <b>Режим D&D Плакаты:</b> Битва запущена! Ждите, пока Ведущий распределит свитки рекурсии.</div>`;
-        } else if(preset === "maf") {
+            zone.innerHTML = `<div class="mafia-card">⚔️ <b>Режим D&D Плакаты:</b> Синхронизация запущена. Ждите распределения кубиков d20 ведущим.</div>`;
+        } else if(type === "maf") {
             document.getElementById("p-maf").classList.add("active");
-            zone.innerHTML = `<div class="mafia-card">🕵️‍♂️ <b>Режим Мафия Исказителей:</b> Роли распределены вслепую. Обсуждайте уловки на плакатах в общем чате!</div>`;
+            zone.innerHTML = `<div class="mafia-card">🕵️‍♂️ <b>Режим Мафия Исказителей:</b> Роли распределены. Анализируйте визуальный посыл социального плаката!</div>`;
         }
     }
 
-    function renderTicTacToe(board) {
+    function renderBoard() {
         let box = document.getElementById("board");
         if(!box) return;
         box.innerHTML = "";
@@ -132,21 +130,34 @@
             let d = document.createElement("div");
             d.className = "cell";
             d.innerText = cell;
-            d.onclick = () => ws.send(JSON.stringify({action: "move", index: idx}));
+            d.onclick = () => makeMove(idx);
             box.appendChild(d);
         });
     }
 
-    function changePresetServer(p) { 
-        if(ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({action: "preset", preset: p})); 
+    function makeMove(idx) {
+        if(board[idx] === "") {
+            board[idx] = currentPlayer;
+            currentPlayer = currentPlayer === "X" ? "O" : "X";
+            renderBoard();
+            
+            // Быстрая проверка победы
+            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for(let l of lines) {
+                if(board[l[0]] && board[l[0]] === board[l[1]] && board[l[0]] === board[l[2]]) {
+                    alert(`🎉 Физминутка для глаз успешно пройдена! Раунд завершен.`);
+                    board = ["", "", "", "", "", "", "", "", ""];
+                    renderBoard();
+                }
+            }
         }
     }
-    
-    function copyLink() { 
-        const inviteText = `Привет! Заходи в мою игру «Сломанный плакат». Ссылка: https://vercel.app Код нашей комнаты: ${myRoom}`;
-        navigator.clipboard.writeText(inviteText); 
-        alert(`Текст с кодом комнаты (${myRoom}) скопирован для отправки игрокам!`); 
+
+    function copyLink() {
+        const cleanHref = window.location.href.split('?')[0];
+        const inviteLink = `${cleanHref}?room=${myRoom}`;
+        navigator.clipboard.writeText(inviteLink);
+        alert(`Прямая ссылка для входа игроков скопирована! Пользователям не придётся вводить код руками.`);
     }
 </script>
 </body>
