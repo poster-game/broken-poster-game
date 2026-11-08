@@ -13,9 +13,6 @@
         .panel { background-color: #4527a0; padding: 20px; border-radius: 15px; border: 2px solid #311b92; }
         .panel-title { font-weight: bold; font-size: 15px; margin-bottom: 15px; text-transform: uppercase; text-align: center; border-bottom: 2px solid #5f3dc4; padding-bottom: 5px; color: #ffeaa7; }
         .player-item { background-color: #5f3dc4; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; font-weight: bold; font-size: 14px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab-btn { background-color: #311b92; color: white; border: none; padding: 10px 15px; font-weight: bold; border-radius: 8px; cursor: pointer; flex: 1; text-transform: uppercase; font-size: 12px; }
-        .tab-btn.active { background-color: #00cec9; color: #1a1a1f; }
         .grid-presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
         .preset-card { background-color: #311b92; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; border: 3px solid transparent; font-weight: bold; font-size: 14px; color: #ffffff; transition: 0.2s; }
         .preset-card:hover { border-color: #ffeaa7; }
@@ -31,6 +28,7 @@
         .tic-tac-toe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 210px; margin: 10px auto; }
         .cell { width: 64px; height: 64px; background-color: #4527a0; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; cursor: pointer; border: 2px solid #5f3dc4; user-select: none; }
         .cell:hover { background-color: #00cec9; color: #1a1a1f; }
+        .cell.target { background-color: #ff7675; animation: pulse 0.5s infinite alternate; }
         
         .stage-indicator { display: flex; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
         .step-dot { width: 10px; height: 10px; background: #5f3dc4; border-radius: 50%; display: inline-block; margin-left: 5px; }
@@ -38,11 +36,11 @@
         
         .animation-screen { text-align: center; background: #1a1a24; padding: 20px; border-radius: 12px; border: 2px dashed #00cec9; margin-top: 10px; }
         .movie-frame { min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #26263b; border-radius: 8px; margin: 15px 0; padding: 10px; }
+        @keyframes pulse { from { background-color: #ff7675; } to { background-color: #00cec9; } }
     </style>
 </head>
 <body>
 
-<!-- ЭКРАН РЕГИСТРАЦИИ И ВХОДА -->
 <div id="auth-block" class="lobby-container" style="max-width: 400px; text-align: center;">
     <h2>Gartic Poster Game 🎨</h2>
     <input type="text" id="username" class="input-field" placeholder="Введите твой ник">
@@ -51,7 +49,6 @@
     <button class="action-btn btn-start" style="width:100%; margin-top: 10px;" onclick="enterLobby()">СОЗДАТЬ КОМНАТУ</button>
 </div>
 
-<!-- ОСНОВНОЙ ИНТЕРФЕЙС ИГРЫ -->
 <div id="lobby-block" class="lobby-container" style="display: none;">
     <div class="header-bar">
         <div class="logo">Gartic Phone х Мафия 🎭</div>
@@ -59,13 +56,11 @@
     </div>
     
     <div class="main-layout">
-        <!-- ЛЕВАЯ ПАНЕЛЬ ИГРОКОВ -->
         <div class="panel">
             <div class="panel-title">👥 Игроки в лобби</div>
             <div id="players-list"></div>
         </div>
         
-        <!-- ПРАВАЯ ИГРОВАЯ ЗОНА -->
         <div class="panel">
             <div class="panel-title" style="color: #ffffff;">Выбор режима игры</div>
             <div class="grid-presets">
@@ -86,13 +81,12 @@
             <div id="game-zone" class="game-card">
                 <div style="text-align:center; margin: auto;">
                     <h3>Добро пожаловать в хаб «Сломанного плаката»!</h3>
-                    <p style="font-size:14px; color:#ffeaa7;">Выберите режим игры выше и нажмите кнопку «НАЧАТЬ ИГРУ» ниже, чтобы запустить цепочку раундов для всех пользователей.</p>
+                    <p style="font-size:14px; color:#ffeaa7;">Выберите режим игры выше и нажмите кнопку «НАЧАТЬ ИГРУ» ниже, чтобы запустить цепочку раундов.</p>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- НИЖНИЕ УПРАВЛЯЮЩИЕ КНОПКИ -->
     <div class="footer-actions">
         <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
         <button class="action-btn btn-start" id="next-stage-btn" onclick="triggerNextState()">НАЧАТЬ ИГРУ 🚀</button>
@@ -107,6 +101,7 @@
     let myName = "", myRoom = "";
     let isDrawing = false, ctx, canvas;
     let connectedPlayers = [];
+    let catchScore = 0, catchTimer;
     
     let gameData = {
         textIdea: "",
@@ -153,8 +148,6 @@
             connectedPlayers.push(myName);
             localStorage.setItem('players_' + myRoom, JSON.stringify(connectedPlayers));
         }
-        
-        // Каждую секунду проверяем, не зашёл ли кто-то ещё по ссылке в нашу комнату
         setInterval(syncNetworkPlayers, 1000);
     }
 
@@ -162,26 +155,25 @@
         if(currentStep > 0) return alert("Нельзя сменить режим во время активного раунда!");
         activeMode = mode;
         document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+        document.getElementById('m-' + mode).classList.add('active');
+    }
+
+    function triggerNextState() {
+        if(currentStep === 0 && connectedPlayers.length % 2 !== 0) {
+            alert("Система обнаружила нечётное количество реальных игроков. Для баланса цепочки Gartic Phone скрытно подключен один виртуальный ассистент!");
+        }
+        clearInterval(catchTimer);
+        currentStep++;
 Используйте код с осторожностью.
-document.getElementById('m-' + mode).classList.add('active');
-}
-function triggerNextState() {
-// ПРАВИЛО НЕЧЁТНОГО КОЛИЧЕСТВА ИГРОКОВ (БОТ-ПОМОЩНИК ВКЛЮЧАЕТСЯ СКРЫТНО ТОЛЬКО ТУТ)
-if(currentStep === 0 && connectedPlayers.length % 2 !== 0) {
-alert("Система обнаружила нечётное количество реальных игроков. Для баланса цепочки Gartic Phone скрытно подключен один виртуальный ассистент!");
-}
-currentStep++;
 updateDots();
-if (activeMode === 'classic') {
-runClassicCycle();
-} else {
-runPlagiatCycle();
-}
+if (activeMode === 'classic') runClassicCycle();
+else runPlagiatCycle();
 }
 function updateDots() {
 document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
 if(currentStep >= 1 && currentStep <= 4) {
-document.getElementById('dot-' + currentStep).getElementById ? "" : document.getElementById('dot-' + currentStep).classList.add('active');
+let dot = document.getElementById('dot-' + currentStep);
+if(dot) dot.classList.add('active');
 }
 }
 function runClassicCycle() {
@@ -201,33 +193,15 @@ initCanvas();
 }
 else if(currentStep === 3) {
 saveCanvasData();
-document.getElementById("current-stage-text").innerText = "Раунд 3: Интерактивная разминка";
+document.getElementById("current-stage-text").innerText = "Раунд 3: Дуэль взглядов";
 btn.innerText = "Перейти к финалу ➡️";
-zone.innerHTML = <h3>👁️ Физминутка: Крестики-Нолики для глаз</h3> <p style="font-size:13px; text-align:center; color:#55efc4; margin:0;">Пока система обрабатывает рисунки всех участников — разомните глаза!</p> <p style="text-align:center; font-size:12px; color:#b2bec3; margin:2px 0 10px 0;">Инструкция: плавно следите взглядом за траекторией появления крестиков и ноликов.</p> <div class="tic-tac-toe" id="ttt-board"></div>;
+zone.innerHTML = <h3>🎲 Раунд 3: Мини-игра «Дуэль взглядов»</h3> <p style="font-size:13px; text-align:center; color:#55efc4; margin:0;">Пока система распределяет рисунки остальных — сыграйте в Крестики-Нолики!</p> <div class="tic-tac-toe" id="ttt-board"></div>;
 renderTTT();
 }
 else if(currentStep === 4) {
-document.getElementById("current-stage-text").innerText = "🎬 Финальная анимация цепочки";
+document.getElementById("current-stage-text").innerText = "🎬 Финальная кинолента";
 btn.innerText = "В главное меню 🔄";
-zone.innerHTML = `
-
-🎬 АНИМАЦИЯ ПОКАЗА ИТОГОВ ГАРТИК ФОН
-Цепочка истории «Сломанного плаката» вашей комнаты:
-Первый участник придумал уловку:
-«${gameData.textIdea}»
-
-⬇️ Анимационный переход ⬇️
-
-Следующий реальный игрок перерисовал плакат:
-
-
-⬇️ Итоговый ответ ⬇️
-
-Финальный игрок разгадал скрытый смысл:
-«Защита режима сна и здоровья от влияния лени мафии!»
-
-
-`;
+zone.innerHTML = <div class="animation-screen"> <h3 style="color:#00cec9; margin:0;">🎬 КИНОЛЕНТА ПОКАЗА ИТОГОВ</h3> <div class="movie-frame"><span style="color:#ffeaa7; font-size:12px;">Уловка Мафии:</span><b style="font-size:16px; margin-top:5px;">«${gameData.textIdea}»</b></div> <div style="font-size:18px;">⬇️ Переход ⬇️</div> <div class="movie-frame"><span style="color:#ffeaa7; font-size:12px; margin-bottom:5px;">Опровергающий плакат:</span><img src="${gameData.savedDrawing || ''}" style="border:2px solid #5f3dc4; border-radius:5px; background:white; max-height:120px;"></div> </div>;
 } else {
 resetToLobby();
 }
@@ -236,44 +210,29 @@ function runPlagiatCycle() {
 let zone = document.getElementById("game-zone");
 let btn = document.getElementById("next-stage-btn");
 if(currentStep === 1) {
-document.getElementById("current-stage-text").innerText = "Раунд 1: Первый художник";
+document.getElementById("current-stage-text").innerText = "Раунд 1: Создание";
 btn.innerText = "Передать копию дальше ➡️";
-zone.innerHTML = <h3>⚔️ Режим ПЛАГИАТ. Шаг 1: Создание оригинала</h3> <p style="font-size:13px; color:#ffeaa7;">Нарисуйте графический образ для темы социального плаката:</p> <div style="background-color:#00cec9; color:#1a1a1f; padding:6px; border-radius:5px; font-weight:bold; text-align:center; margin-bottom:8px;">«${gameData.plagiatTitle}»</div> <canvas id="paintCanvas" width="480" height="190"></canvas> <button class="tab-btn" style="background-color:#ffeaa7; color:black; max-width:140px; margin:0 auto;" onclick="ctx.clearRect(0,0,480,190)">Очистить</button>;
+zone.innerHTML = <h3>⚔️ Шаг 1: Создание оригинала</h3> <p style="font-size:13px; color:#ffeaa7;">Нарисуйте графический образ для темы социального плаката:</p> <div style="background-color:#00cec9; color:#1a1a1f; padding:6px; border-radius:5px; font-weight:bold; text-align:center; margin-bottom:8px;">«${gameData.plagiatTitle}»</div> <canvas id="paintCanvas" width="480" height="190"></canvas> <button class="tab-btn" style="background-color:#ffeaa7; color:black; max-width:140px; margin:0 auto;" onclick="ctx.clearRect(0,0,480,190)">Очистить</button>;
 initCanvas();
 }
 else if(currentStep === 2) {
 saveCanvasData();
-document.getElementById("current-stage-text").innerText = "Раунд 2: Плагиат вслепую";
+document.getElementById("current-stage-text").innerText = "Раунд 2: Плагиат";
 btn.innerText = "Сдать копию ➡️";
-zone.innerHTML = <h3>👥 Шаг 2: Искажение плагиата (Эффект мафии)</h3> <p style="font-size:13px; color:#ff7675;">Внимание! Система скрыла оригинальный рисунок. Вам переданы только текстовые обрывки. Попробуйте воссоздать плакат по памяти:</p> <canvas id="paintCanvas" width="480" height="190"></canvas> <button class="tab-btn" style="background-color:#ffeaa7; color:black; max-width:140px; margin:0 auto;" onclick="ctx.clearRect(0,0,480,190)">Очистить</button>;
+zone.innerHTML = <h3>👥 Шаг 2: Искажение плагиата (Эффект мафии)</h3> <p style="font-size:13px; color:#ff7675;">Оригинальный рисунок скрыт! Воссоздайте плакат по памяти по текстовым обрывкам:</p> <canvas id="paintCanvas" width="480" height="190"></canvas> <button class="tab-btn" style="background-color:#ffeaa7; color:black; max-width:140px; margin:0 auto;" onclick="ctx.clearRect(0,0,480,190)">Очистить</button>;
 initCanvas();
 }
 else if(currentStep === 3) {
-document.getElementById("current-stage-text").innerText = "Раунд 3: Разминка для глаз";
+catchScore = 0;
+document.getElementById("current-stage-text").innerText = "Раунд 3: Охота на пиксели";
 btn.innerText = "Смотреть плагиат-клип ➡️";
-zone.innerHTML = <h3>👁️ Физминутка: Перестановка Крестиков-Ноликов</h3> <p style="font-size:13px; text-align:center; color:#55efc4; margin:0;">Пока пользователи завершают копирование — выполните физминутку!</p> <p style="text-align:center; font-size:12px; color:#b2bec3; margin:2px 0 10px 0;">Инструкция: сфокусируйте взгляд на центральной клетке при кликах.</p> <div class="tic-tac-toe" id="ttt-board"></div>;
-renderTTT();
+zone.innerHTML = <h3>🎯 Раунд 3: Мини-игра «Поймай Исказителя»</h3> <p style="font-size:13px; text-align:center; color:#55efc4; margin:0 0 5px 0;">Быстро тапайте по загорающимся квадратам во всех углах поля! Счет: <span id="c-score">0</span></p> <div class="tic-tac-toe" id="catch-board"></div>;
+initCatchGame();
 }
 else if(currentStep === 4) {
-document.getElementById("current-stage-text").innerText = "🎬 Шкала плагиата (Анимация)";
+document.getElementById("current-stage-text").innerText = "🎬 Шкала плагиата";
 btn.innerText = "В главное меню 🔄";
-zone.innerHTML = `
-
-🎬 КИНОЛЕНТА СРАВНЕНИЯ ПЛАГИАТА
-Как менялся образ плаката из-за текстового шума:
-1. ОРИГИНАЛ:
-
-
-⬇️ 50% ПЛАГИАТ (Игрок 2) ⬇️
-
-2. Рисунок потерял детали, остался только зеленый контур дерева!
-
-⬇️ ФИНАЛЬНЫЙ ВАРИАНТ ⬇️
-
-3. Финальный игрок вместо леса нарисовал зелёный доллар! Смысл искажен Мафией!
-
-
-`;
+zone.innerHTML = <div class="animation-screen"> <h3 style="color:#ffeaa7; margin:0;">🎬 КИНОЛЕНТА СРАВНЕНИЯ ПЛАГИАТА</h3> <div class="movie-frame"><span style="color:#55efc4; font-size:12px;">1. ОРИГИНАЛ:</span><img src="${gameData.savedDrawing || ''}" style="border:2px solid #55efc4; border-radius:5px; background:white; max-height:100px; margin-top:5px;"></div> <div style="font-size:16px; color:#ff7675;">⬇️ СЛОМАННЫЙ ВАРИАНТ МАФИИ ⬇️</div> <div class="movie-frame"><span style="color:#ff7675; font-size:12px;">Вместо леса нарисован зелёный доллар! Смысл полностью искажен.</span></div> </div>;
 } else {
 resetToLobby();
 }
@@ -284,7 +243,7 @@ board = ["", "", "", "", "", "", "", "", ""];
 updateDots();
 document.getElementById("current-stage-text").innerText = "Режим ожидания запуска";
 document.getElementById("next-stage-btn").innerText = "НАЧАТЬ ИГРУ 🚀";
-document.getElementById("game-zone").innerHTML = <div style="text-align:center; margin: auto;"> <h3>Новая сессия готова к запуску!</h3> <p style="font-size:14px; color:#ffeaa7;">Смените предустановку сверху или нажмите кнопку «НАЧАТЬ ИГРУ», чтобы пойти по новому кругу.</p> </div>;
+document.getElementById("game-zone").innerHTML = <div style="text-align:center; margin: auto;"> <h3>Новая сессия готова к запуску!</h3> <p style="font-size:14px; color:#ffeaa7;">Смените предустановку сверху или нажмите кнопку «НАЧАТЬ ИГРУ».</p> </div>;
 }
 function initCanvas() {
 canvas = document.getElementById("paintCanvas");
@@ -299,19 +258,8 @@ let r = canvas.getBoundingClientRect();
 ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
 ctx.stroke(); ctx.beginPath(); ctx.moveTo(e.clientX - r.left, e.clientY - r.top);
 });
-canvas.addEventListener("touchstart", (e) => { isDrawing = true; e.preventDefault(); });
-canvas.addEventListener("touchend", () => { isDrawing = false; ctx.beginPath(); });
-canvas.addEventListener("touchmove", (e) => {
-if(!isDrawing) return;
-let t = e.touches;
-let r = canvas.getBoundingClientRect();
-ctx.lineTo(t.clientX - r.left, t.clientY - r.top);
-ctx.stroke(); ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top);
-});
 }
-function saveCanvasData() {
-if(canvas) gameData.savedDrawing = canvas.toDataURL();
-}
+function saveCanvasData() { if(canvas) gameData.savedDrawing = canvas.toDataURL(); }
 function renderTTT() {
 let box = document.getElementById("ttt-board");
 if(!box) return; box.innerHTML = "";
@@ -323,24 +271,42 @@ if(board[idx] === "") {
 board[idx] = turn;
 turn = turn === "X" ? "O" : "X";
 renderTTT();
-const winLines = [,,,,,,,];
-for(let line of winLines) {
-if(board[line] && board[line] === board[line] && board[line] === board[line]) {
-alert(🎉 Разминка глаз успешно завершена! Усталость снята.);
-board = ["", "", "", "", "", "", "", "", ""];
-renderTTT();
-return;
-}
-}
 }
 };
 box.appendChild(d);
 });
 }
+function initCatchGame() {
+let box = document.getElementById("catch-board");
+if(!box) return; box.innerHTML = "";
+for(let i=0; i<9; i++) {
+let d = document.createElement("div");
+d.className = "cell";
+d.id = "c-" + i;
+box.appendChild(d);
+}
+moveTarget();
+catchTimer = setInterval(moveTarget, 800);
+}
+function moveTarget() {
+document.querySelectorAll("#catch-board .cell").forEach(c => {
+c.classList.remove("target");
+c.onclick = null;
+});
+let rand = Math.floor(Math.random() * 9);
+let targetCell = document.getElementById("c-" + rand);
+if(targetCell) {
+targetCell.classList.add("target");
+targetCell.onclick = () => {
+catchScore++;
+document.getElementById("c-score").innerText = catchScore;
+moveTarget();
+};
+}
+}
 function copyLink() {
 const inviteLink = ${window.location.origin}${window.location.pathname}?room=${myRoom};
 navigator.clipboard.writeText(inviteLink);
-alert(Настоящая сетевая ссылка скопирована! Игроки зайдут напрямую в комнату ${myRoom}.);
+alert(Ссылка скопирована! Игроки зайдут напрямую в комнату ${myRoom}.);
 }
-
 
