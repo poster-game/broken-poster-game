@@ -66,7 +66,7 @@
         </div>
     </div>
     <div class="footer-actions">
-        <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ ДЛЯ КЛАССА</button>
+        <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ ДЛЯ ИГРОКОВ</button>
         <button class="action-btn btn-start" onclick="alert('Игра запущена! Перейдите во вкладку КРЕСТИКИ для прохождения физминутки.')">🚀 НАЧАТЬ ИГРУ</button>
     </div>
 </div>
@@ -75,9 +75,8 @@
     let myName = "", myRoom = "", ws;
     const SERVER_URL = "://pythonanywhere.com"; 
 
-    // АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ КОДА КОМНАТЫ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
     window.onload = function() {
-        const randomNum = Math.floor(100 + Math.random() * 900); // Случайное число от 100 до 999
+        const randomNum = Math.floor(100 + Math.random() * 900);
         document.getElementById("roomid").value = `ROOM-${randomNum}`;
     };
 
@@ -104,7 +103,7 @@
         };
 
         ws.onerror = () => {
-            alert("Ошибка сети! Проверьте, что сервер на PythonAnywhere запущен.");
+            alert("Ошибка сети! Проверьте, что сервер запущен.");
         };
     }
 
@@ -116,10 +115,10 @@
             zone.innerHTML = `<h3 style="text-align:center; margin-bottom:5px;">Физминутка: Крестики-Нолики для глаз 👁️</h3><p style="text-align:center; font-size:13px; margin:0 0 15px 0; color:#b2bec3;">Инструкция: при рисовании символов водите взглядом строго по линиям!</p><div class="tic-tac-toe" id="board"></div>`;
         } else if(preset === "dnd") {
             document.getElementById("p-dnd").classList.add("active");
-            zone.innerHTML = `<div class="mafia-card">⚔️ <b>Режим D&D Плакаты:</b> Битва классов запущена! Ждите, пока Ведущий распределит свитки рекурсии.</div>`;
+            zone.innerHTML = `<div class="mafia-card">⚔️ <b>Режим D&D Плакаты:</b> Битва запущена! Ждите, пока Ведущий распределит свитки рекурсии.</div>`;
         } else if(preset === "maf") {
             document.getElementById("p-maf").classList.add("active");
-            zone.innerHTML = `<div class="mafia-card">🕵️‍♂️ <b>Режим Мафия Исказителей:</b> Роли распределены вслепую. Обсуждайте уловки на плакатах в общем чате онлайн-урока!</div>`;
+            zone.innerHTML = `<div class="mafia-card">🕵️‍♂️ <b>Режим Мафия Исказителей:</b> Роли распределены вслепую. Обсуждайте уловки на плакатах в общем чате!</div>`;
         }
     }
 
@@ -143,10 +142,9 @@
     }
     
     function copyLink() { 
-        // Копируем ссылку вместе со сгенерированным кодом комнаты, чтобы друзьям не пришлось вводить его вручную!
         const inviteText = `Привет! Заходи в мою игру «Сломанный плакат». Ссылка: https://github.io Код нашей комнаты: ${myRoom}`;
         navigator.clipboard.writeText(inviteText); 
-        alert(`Текст с кодом комнаты (${myRoom}) скопирован! Отправьте его классу в чат Сферума.`); 
+        alert(`Текст с кодом комнаты (${myRoom}) скопирован для отправки игрокам!`); 
     }
 </script>
 </body>
