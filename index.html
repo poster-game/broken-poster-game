@@ -73,7 +73,8 @@
 
 <script>
     let myName = "", myRoom = "", ws;
-    const SERVER_URL = "://pythonanywhere.com"; 
+    // Безопасный сетевой протокол wss:// для обхода блокировок браузера
+    const SERVER_URL = "wss://://pythonanywhere.com"; 
 
     window.onload = function() {
         const randomNum = Math.floor(100 + Math.random() * 900);
@@ -85,7 +86,8 @@
         myRoom = document.getElementById("roomid").value.trim();
         if(!myName || !myRoom) return alert("Пожалуйста, заполните все поля!");
 
-        ws = new WebSocket(`wss://${SERVER_URL}/ws/${myRoom}/${myName}`);
+        // Подключаемся напрямую к безопасному адресу
+        ws = new WebSocket(`${SERVER_URL}/ws/${myRoom}/${myName}`);
         
         ws.onopen = () => {
             document.getElementById("auth-block").style.display = "none";
@@ -103,7 +105,7 @@
         };
 
         ws.onerror = () => {
-            alert("Ошибка сети! Проверьте, что сервер запущен.");
+            alert("Ошибка сети! Убедитесь, что сервер на PythonAnywhere запущен и перезагружен через кнопку Reload.");
         };
     }
 
@@ -142,7 +144,7 @@
     }
     
     function copyLink() { 
-        const inviteText = `Привет! Заходи в мою игру «Сломанный плакат». Ссылка: https://github.io Код нашей комнаты: ${myRoom}`;
+        const inviteText = `Привет! Заходи в мою игру «Сломанный плакат». Ссылка: https://vercel.app Код нашей комнаты: ${myRoom}`;
         navigator.clipboard.writeText(inviteText); 
         alert(`Текст с кодом комнаты (${myRoom}) скопирован для отправки игрокам!`); 
     }
