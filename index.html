@@ -41,6 +41,7 @@
 </head>
 <body>
 
+<!-- ЭКРАН РЕГИСТРАЦИИ И ВХОДА -->
 <div id="auth-block" class="lobby-container" style="max-width: 400px; text-align: center;">
     <h2>Gartic Poster Game 🎨</h2>
     <input type="text" id="username" class="input-field" placeholder="Введите твой ник">
@@ -49,6 +50,7 @@
     <button class="action-btn btn-start" style="width:100%; margin-top: 10px;" onclick="enterLobby()">СОЗДАТЬ КОМНАТУ</button>
 </div>
 
+<!-- ОСНОВНОЙ ИНТЕРФЕЙС ИГРЫ -->
 <div id="lobby-block" class="lobby-container" style="display: none;">
     <div class="header-bar">
         <div class="logo">Gartic Phone х Мафия 🎭</div>
@@ -56,11 +58,13 @@
     </div>
     
     <div class="main-layout">
+        <!-- ЛЕВАЯ ПАНЕЛЬ ИГРОКОВ -->
         <div class="panel">
             <div class="panel-title">👥 Игроки в лобби</div>
             <div id="players-list"></div>
         </div>
         
+        <!-- ПРАВАЯ ИГРОВАЯ ЗОНА -->
         <div class="panel">
             <div class="panel-title" style="color: #ffffff;">Выбор режима игры</div>
             <div class="grid-presets">
@@ -87,6 +91,7 @@
         </div>
     </div>
     
+    <!-- НИЖНИЕ УПРАВЛЯЮЩИЕ КНОПКИ -->
     <div class="footer-actions">
         <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
         <button class="action-btn btn-start" id="next-stage-btn" onclick="triggerNextState()">НАЧАТЬ ИГРУ 🚀</button>
@@ -116,7 +121,7 @@
             document.getElementById("roomid").value = urlRoom;
             document.getElementById("roomid").disabled = true;
         } else {
-            document.getElementById("roomid").value = `ROOM-${Math.floor(100 + Math.random() * 900)}`;
+            document.getElementById("roomid").value = `${Math.floor(100 + Math.random() * 900)}`;
         }
         syncNetworkPlayers();
     };
@@ -160,11 +165,11 @@
 
     function triggerNextState() {
         if(currentStep === 0 && connectedPlayers.length % 2 !== 0) {
-            alert("Система обнаружила нечётное количество реальных игроков. Для баланса цепочки Gartic Phone скрытно подключен один виртуальный ассистент!");
-        }
-        clearInterval(catchTimer);
-        currentStep++;
 Используйте код с осторожностью.
+alert("Система обнаружила нечётное количество реальных игроков. Для баланса цепочки Gartic Phone скрытно подключен один виртуальный ассистент!");
+}
+clearInterval(catchTimer);
+currentStep++;
 updateDots();
 if (activeMode === 'classic') runClassicCycle();
 else runPlagiatCycle();
@@ -182,7 +187,7 @@ let btn = document.getElementById("next-stage-btn");
 if(currentStep === 1) {
 document.getElementById("current-stage-text").innerText = "Раунд 1: Запись идеи";
 btn.innerText = "Сдать бланк идеи ➡️";
-zone.innerHTML = <h3>📝 Раунд 1: Уловка Исказителей</h3> <p style="font-size:14px; color:#ffeaa7;">Напишите абсурдную фразу, которой Мафия могла бы переписать социальный плакат:</p> <input type="text" id="classic-idea" class="input-field" placeholder="Пример: Читай книги — ломай гаджеты!"> <p style="font-size:12px; color:#b2bec3;">Ваша текстовая формулировка отправится по цепочке следующему игроку на холст!</p>;
+zone.innerHTML = <h3>📝 Раунд 1: Уловка Исказителей</h3> <p style="font-size:14px; color:#ffeaa7;">Напишите абсурдную фразу, которой Мафия могла бы переписать social-плакат:</p> <input type="text" id="classic-idea" class="input-field" placeholder="Пример: Читай книги — ломай гаджеты!"> <p style="font-size:12px; color:#b2bec3;">Ваша текстовая формулировка отправится по цепочке следующему игроку на холст!</p>;
 }
 else if(currentStep === 2) {
 gameData.textIdea = document.getElementById("classic-idea")?.value || "Забей на учёбу, ложись спать!";
@@ -226,7 +231,7 @@ else if(currentStep === 3) {
 catchScore = 0;
 document.getElementById("current-stage-text").innerText = "Раунд 3: Охота на пиксели";
 btn.innerText = "Смотреть плагиат-клип ➡️";
-zone.innerHTML = <h3>🎯 Раунд 3: Мини-игра «Поймай Исказителя»</h3> <p style="font-size:13px; text-align:center; color:#55efc4; margin:0 0 5px 0;">Быстро тапайте по загорающимся квадратам во всех углах поля! Счет: <span id="c-score">0</span></p> <div class="tic-tac-toe" id="catch-board"></div>;
+zone.innerHTML = <h3>🎯 Раунд 3: Мини-игра «Поймай Исказителя»</h3> <p style="font-size:13px; text-align:center; color:#55efc4; margin:0 0 5px 0;">Быстро тапайте по загорающимся квадратам! Счет: <span id="c-score">0</span></p> <div class="tic-tac-toe" id="catch-board"></div>;
 initCatchGame();
 }
 else if(currentStep === 4) {
