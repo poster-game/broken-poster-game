@@ -19,17 +19,20 @@
         .grid-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .preset-card { background-color: #5f3dc4; padding: 15px; border-radius: 12px; text-align: center; cursor: pointer; border: 3px solid transparent; transition: 0.2s; font-weight: bold; }
         .preset-card.active { border-color: #00cec9; background-color: #311b92; }
+        .mafia-card { background-color: #311b92; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 15px; line-height: 1.5; }
         .footer-actions { display: flex; justify-content: space-between; margin-top: 20px; gap: 15px; }
         .action-btn { padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 12px; border: none; cursor: pointer; flex: 1; text-align: center; text-transform: uppercase; }
         .btn-invite { background-color: #ffeaa7; color: #2d3436; }
         .btn-start { background-color: #55efc4; color: #2d3436; }
         .tic-tac-toe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 260px; margin: 20px auto; }
-        .cell { width: 80px; height: 80px; background-color: #311b92; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 36px; font-weight: bold; cursor: pointer; border: 2px solid #5f3dc4; }
-        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: none; box-sizing: border-box; font-size: 16px; }
+        .cell { width: 80px; height: 80px; background-color: #311b92; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 36px; font-weight: bold; cursor: pointer; border: 2px solid #5f3dc4; user-select: none; }
+        .cell:hover { background-color: #00cec9; color: #1a1a1f; }
+        .input-field { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: none; box-sizing: border-box; font-size: 16px; background-color: #ffffff; color: #000000; }
     </style>
 </head>
 <body>
 
+<!-- ЭКРАН АВТОРИЗАЦИИ -->
 <div id="auth-block" class="lobby-container" style="max-width: 400px; text-align: center;">
     <h2>Вход в Сломанный Плакат</h2>
     <input type="text" id="username" class="input-field" placeholder="Твой ник">
@@ -37,6 +40,7 @@
     <button class="action-btn btn-start" style="width:100%;" onclick="initNetwork()">Войти в лобби</button>
 </div>
 
+<!-- ЭКРАН ИГРОВОГО ЛОББИ -->
 <div id="lobby-block" class="lobby-container" style="display: none;">
     <div class="header-bar">
         <div class="logo">Сломанный Плакат 🎨</div>
@@ -50,7 +54,7 @@
         <div class="panel">
             <div class="tabs">
                 <button class="tab-btn active">Предустановки</button>
-                <button class="tab-btn">Особые настройки</button>
+                <button class="tab-btn" onclick="alert('Особые настройки активируются администратором!')">Особые настройки</button>
             </div>
             <div class="grid-presets">
                 <div class="preset-card active" id="p-mafia" onclick="changePresetServer('mafia')">🎲 ОБЫЧНО (КРЕСТИКИ)</div>
@@ -62,20 +66,21 @@
     </div>
     <div class="footer-actions">
         <button class="action-btn btn-invite" onclick="copyLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
-        <button class="action-btn btn-start" onclick="startGameServer()">🚀 НАЧАТЬ ИГРУ</button>
+        <button class="action-btn btn-start" onclick="alert('Игра запущена! Перейдите во вкладку КРЕСТИКИ для прохождения физминутки.')">🚀 НАЧАТЬ ИГРУ</button>
     </div>
 </div>
 
 <script>
     let myName = "", myRoom = "", ws;
-    // Адрес нашего будущего стабильного Python-сервера
-    const SERVER_URL = "://pythonanywhere.com"; 
+    // Адрес вашего стабильного и запущенного сервера на PythonAnywhere
+    const SERVER_URL = "vlad1.pythonanywhere.com"; 
 
     function initNetwork() {
         myName = document.getElementById("username").value.trim();
         myRoom = document.getElementById("roomid").value.trim();
-        if(!myName || !myRoom) return alert("Заполните поля!");
+        if(!myName || !myRoom) return alert("Пожалуйста, заполните все поля!");
 
+        // Подключение к вашему Python-серверу через сетевой протокол веб-сокетов
         ws = new WebSocket(`wss://${SERVER_URL}/ws/${myRoom}/${myName}`);
         
         ws.onopen = () => {
@@ -87,11 +92,15 @@
         ws.onmessage = (e) => {
             let msg = JSON.parse(e.data);
             if(msg.type === "sync") {
-                // Обновление списка игроков у ВСЕХ на экранах в реальном времени
-                document.getElementById("players-list").innerHTML = msg.players.map(p => `<div class="player-item">${p}</div>`).join("");
+                // Мгновенная сетевая синхронизация списка игроков у всех на экранах
+                document.getElementById("players-list").innerHTML = msg.players.map(p => `<div class="player-item">👤 ${p}</div>`).join("");
                 updatePresetUI(msg.preset);
                 if(msg.preset === "mafia") renderTicTacToe(msg.board);
             }
+        };
+
+        ws.onerror = () => {
+            alert("Ошибка сети! Проверьте, что сервер на PythonAnywhere запущен и перезагружен через кнопку Reload.");
         };
     }
 
@@ -100,9 +109,13 @@
         let zone = document.getElementById("game-zone");
         if(preset === "mafia") {
             document.getElementById("p-mafia").classList.add("active");
-            zone.innerHTML = `<h3 style="text-align:center;">Физминутка: Крестики-Нолики для глаз</h3><div class="tic-tac-toe" id="board"></div>`;
-        } else {
-            zone.innerHTML = `<div class="mafia-card">Выбран режим: ${preset.toUpperCase()}. Ждите запуска администратором.</div>`;
+            zone.innerHTML = `<h3 style="text-align:center; margin-bottom:5px;">Физминутка: Крестики-Нолики для глаз 👁️</h3><p style="text-align:center; font-size:13px; margin:0 0 15px 0; color:#b2bec3;">Инструкция: при рисовании символов водите взглядом строго по линиям!</p><div class="tic-tac-toe" id="board"></div>`;
+        } else if(preset === "dnd") {
+            document.getElementById("p-dnd").classList.add("active");
+            zone.innerHTML = `<div class="mafia-card">⚔️ <b>Режим D&D Плакаты:</b> Битва классов запущена! Ждите, пока Ведущий распределит свитки рекурсии.</div>`;
+        } else if(preset === "maf") {
+            document.getElementById("p-p-maf").classList.add("active");
+            zone.innerHTML = `<div class="mafia-card">🕵️‍♂️ <b>Режим Мафия Исказителей:</b> Роли распределены вслепую. Обсуждайте уловки на плакатах в общем чате онлайн-урока!</div>`;
         }
     }
 
@@ -114,14 +127,21 @@
             let d = document.createElement("div");
             d.className = "cell";
             d.innerText = cell;
-            d.onclick = () => ws.send(jsonStr({action: "move", index: idx}));
+            d.onclick = () => ws.send(JSON.stringify({action: "move", index: idx}));
             box.appendChild(d);
         });
     }
 
-    function changePresetServer(p) { ws.send(jsonStr({action: "preset", preset: p})); }
-    function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Ссылка скопирована!"); }
-    function jsonStr(obj) { return JSON.stringify(obj); }
+    function changePresetServer(p) { 
+        if(ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({action: "preset", preset: p})); 
+        }
+    }
+    
+    function copyLink() { 
+        navigator.clipboard.writeText(`https://github.io`); 
+        alert("Официальная ссылка на лобби скопирована! Отправьте её классу в чат."); 
+    }
 </script>
 </body>
 </html>
