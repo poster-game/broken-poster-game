@@ -5,7 +5,7 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Сломанный Плакат", layout="wide")
 
-# МАСКИРОВКА ИНТЕРФЕЙСА: Скрываем панели Streamlit
+# 🔥 МАСКИРОВКА ИНТЕРФЕЙСА: Скрываем панели Streamlit и нижнюю плашку Manage app
 hide_menu_style = """
         <style>
         #MainMenu {visibility: hidden;}
@@ -13,11 +13,15 @@ hide_menu_style = """
         footer {visibility: hidden;}
         div[data-testid="stDecoration"] {visibility: hidden;}
         button[title="View source"] {display:none;}
+        /* Прячем кнопку Manage app и логотип платформы в углу */
+        iframe[title="Manage app"] {display: none !important;}
+        div[class^="viewerBadge"] {display: none !important;}
+        #streamlitViewerBadge {display: none !important;}
         </style>
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-# 🔥 НАСТОЯЩАЯ ГЛОБАЛЬНАЯ ПАМЯТЬ СЕРВЕРА (вне сессий браузера)
+# --- НАСТОЯЩАЯ ГЛОБАЛЬНАЯ ПАМЯТЬ СЕРВЕРА ---
 if not hasattr(st, "_global_game_rooms"):
     st._global_game_rooms = {}
 
@@ -45,7 +49,6 @@ if not st.session_state.my_name:
             st.session_state.my_name = user_name
             st.session_state.my_room = room_id
             
-            # Инициализация комнаты на сервере
             if room_id not in st._global_game_rooms:
                 st._global_game_rooms[room_id] = {
                     "players": [],
@@ -68,13 +71,12 @@ if not st.session_state.my_name:
 else:
     room_id = st.session_state.my_room
     
-    # Защита от сброса
     if room_id not in st._global_game_rooms:
         st._global_game_rooms[room_id] = {"players": [st.session_state.my_name], "bots": [], "stage": "lobby", "game_mode": "Обычный плакат", "idea": "", "canvas_data": None, "timer_start": None}
         
     room_data = st._global_game_rooms[room_id]
     
-    # Железный создатель: самый первый в списке на сервере
+    # Хост — первый в списке игроков
     if room_data["players"]:
         current_host = room_data["players"][0]
     else:
@@ -117,7 +119,6 @@ else:
         with col2:
             st.subheader("Настройки раунда")
             
-            # Проверка прав создателя
             if st.session_state.my_name == current_host:
                 room_data["game_mode"] = st.radio("Режим игры:", ["Обычный плакат", "Слепой плагиат", "Тайный исказитель"])
                 st.info("⏱️ Время на раунд: 5 минут.")
