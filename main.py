@@ -77,17 +77,19 @@ else:
         st.title("🎭 Лобби игры")
         st.write(f"Вы в комнате: **{room_id}**")
         
-        # Полностью исправленный точный адрес вашего приложения
-        invite_link = f"https://streamlit.app{room_id}"
-        st.text_input("🔗 Ссылка для друзей:", value=invite_link)
-        st.caption("Выделите текст выше и нажмите Ctrl+C, чтобы скопировать ссылку другу.")
+        # 🔥 ПОЛНОСТЬЮ АВТОМАТИЧЕСКАЯ ССЫЛКА БЕЗ ЖЕСТКОГО ТЕКСТА
+        # Берем чистый домен из адресной строки через st.query_params
+        st.query_params["room"] = room_id
+        invite_link = "Скопируйте адресную строку вашего браузера вверху страницы!"
+        
+        st.info("📢 Чтобы позвать друга в эту комнату, просто **скопируйте всю ссылку из адресной строки вашего браузера** (в самом верху экрана) и отправьте ему!")
+        st.text_input("🔗 Номер текущей комнаты для проверки:", value=room_id, disabled=True)
         
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("👥 Участники:")
             for p in room_data["players"]:
                 st.markdown(f"👤 **{p}**")
-            # Боты в самом начале в списке НЕ отображаются!
             if st.button("🔄 Обновить список"):
                 st.rerun()
                 
@@ -97,7 +99,6 @@ else:
             st.info("⏱️ Время на раунд: 5 минут.")
             
             if st.button("НАЧАТЬ ИГРУ 🚀", type="primary"):
-                # Если игроков нечетное число, скрытно подключаем бота для баланса пар
                 total_players = len(room_data["players"])
                 if total_players % 2 != 0:
                     room_data["bots"] = ["Бот-Ассистент"]
@@ -144,7 +145,7 @@ else:
             room_data["timer_start"] = time.time()
             st.rerun()
 
-    # --- 4. РАУНД 2: РИСОВАНИЕ (РАЗРЕШЕНА ЛЮБАЯ ЕРУНДА) ---
+    # --- 4. РАУНД 2: РИСОВАНИЕ ---
     elif room_data["stage"] == "round_2":
         st.title("🎨 Раунд 2: Время рисовать")
         handle_timer()
@@ -164,7 +165,6 @@ else:
             key="gartic_canvas",
         )
         
-        # Кнопка пропускает абсолютно любой рисунок (даже каракули)
         if st.button("Отправить рисунок 🎬", type="primary"):
             room_data["canvas_data"] = canvas_result.image_data
             room_data["stage"] = "final"
@@ -193,4 +193,5 @@ else:
             room_data["idea"] = ""
             room_data["canvas_data"] = None
             room_data["bots"] = []
+            st.query_params["room"] = room_id
             st.rerun()
