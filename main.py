@@ -5,7 +5,7 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Сломанный Плакат", layout="wide")
 
-# --- СЕРВЕРНАЯ ПАМЯТЬ ---
+# --- СЕРВЕРНАЯ ПАМЯТЬ ДЛЯ ВСЕХ КОМНАТ ---
 if "global_rooms" not in st.session_state:
     st.session_state.global_rooms = {}
 
@@ -35,7 +35,7 @@ if not st.session_state.my_name:
                     "players": [],
                     "bots": [],
                     "stage": "lobby",
-                    "game_mode": "Классика",
+                    "game_mode": "Обычный плакат",
                     "idea": "",
                     "canvas_data": None,
                     "timer_start": None
@@ -52,7 +52,7 @@ if not st.session_state.my_name:
 else:
     room_id = st.session_state.my_room
     if room_id not in st.session_state.global_rooms:
-        st.session_state.global_rooms[room_id] = {"players": [st.session_state.my_name], "bots": [], "stage": "lobby", "game_mode": "Классика", "idea": "", "canvas_data": None, "timer_start": None}
+        st.session_state.global_rooms[room_id] = {"players": [st.session_state.my_name], "bots": [], "stage": "lobby", "game_mode": "Обычный плакат", "idea": "", "canvas_data": None, "timer_start": None}
         
     room_data = st.session_state.global_rooms[room_id]
     
@@ -77,16 +77,17 @@ else:
         st.title("🎭 Лобби игры")
         st.write(f"Вы в комнате: **{room_id}**")
         
-        # Исправленная полностью автоматическая ссылка
+        # Полностью исправленный точный адрес вашего приложения
         invite_link = f"https://streamlit.app{room_id}"
-        st.text_input("🔗 Ссылка для друзей:", value=invite_link, disabled=True)
+        st.text_input("🔗 Ссылка для друзей:", value=invite_link)
+        st.caption("Выделите текст выше и нажмите Ctrl+C, чтобы скопировать ссылку другу.")
         
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("👥 Участники:")
             for p in room_data["players"]:
                 st.markdown(f"👤 **{p}**")
-            # Боты тут НЕ показываются, список чист!
+            # Боты в самом начале в списке НЕ отображаются!
             if st.button("🔄 Обновить список"):
                 st.rerun()
                 
@@ -96,7 +97,7 @@ else:
             st.info("⏱️ Время на раунд: 5 минут.")
             
             if st.button("НАЧАТЬ ИГРУ 🚀", type="primary"):
-                # Автоматическая проверка на нечетность и подключение ботов ПОСЛЕ старта
+                # Если игроков нечетное число, скрытно подключаем бота для баланса пар
                 total_players = len(room_data["players"])
                 if total_players % 2 != 0:
                     room_data["bots"] = ["Бот-Ассистент"]
@@ -123,7 +124,7 @@ else:
             else:
                 st.error("Пожалуйста, введите текст!")
 
-    # --- 3. ПАРНАЯ МИНИ-ИГРА (ВМЕСТО КРЕСТИКОВ-НОЛИКОВ) ---
+    # --- 3. ПАРНАЯ МИНИ-ИГРА ---
     elif room_data["stage"] == "mini_game":
         st.title("⚡ Парный перерыв: Синхронизация")
         st.write("Пока остальные игроки дописывают фразы, найдите парный цвет!")
@@ -163,7 +164,7 @@ else:
             key="gartic_canvas",
         )
         
-        # Кнопка пропускает абсолютно любой рисунок (даже пустой или каракули)
+        # Кнопка пропускает абсолютно любой рисунок (даже каракули)
         if st.button("Отправить рисунок 🎬", type="primary"):
             room_data["canvas_data"] = canvas_result.image_data
             room_data["stage"] = "final"
@@ -174,13 +175,12 @@ else:
         st.title("🎬 Результаты игры")
         st.subheader(f"Режим проведения: {room_data['game_mode']}")
         
-        st.markdown(f"### 🔤 Начальная идея от игрока (**{room_data['players'][0]}**):")
+        st.markdown(f"### 🔤 Начальная идея от игроков:")
         st.info(f"«{room_data['idea']}»")
         
-        # Демонстрация участия бота, если игроков было нечетное количество
         if len(room_data["bots"]) > 0:
             st.markdown("### 🤖 Вклад ИИ-Помощника:")
-            st.caption("Бот успешно продублировал концепт и передал ход по цепочке.")
+            st.caption("Бот успешно продублировал концепт и передал ход по цепочке результатов.")
             
         st.markdown("### 🖼️ Что получилось в итоге:")
         if room_data["canvas_data"] is not None:
