@@ -5,6 +5,18 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Сломанный Плакат", layout="wide")
 
+# 🔥 МАСКИРОВКА ИНТЕРФЕЙСА: Полностью скрываем кнопки Fork, Share, Deploy и меню Streamlit
+hide_menu_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        div[data-testid="stDecoration"] {visibility: hidden;}
+        button[title="View source"] {display:none;}
+        </style>
+        """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
+
 # --- СЕРВЕРНАЯ ПАМЯТЬ ДЛЯ ВСЕХ КОМНАТ ---
 if "global_rooms" not in st.session_state:
     st.session_state.global_rooms = {}
@@ -33,6 +45,7 @@ if not st.session_state.my_name:
             if st.session_state.my_room not in st.session_state.global_rooms:
                 st.session_state.global_rooms[st.session_state.my_room] = {
                     "players": [],
+                    "host": "", # Сюда запишется самый первый вошедший
                     "bots": [],
                     "stage": "lobby",
                     "game_mode": "Обычный плакат",
@@ -41,8 +54,14 @@ if not st.session_state.my_name:
                     "timer_start": None
                 }
             
-            if st.session_state.my_name not in st.session_state.global_rooms[st.session_state.my_room]["players"]:
-                st.session_state.global_rooms[st.session_state.my_room]["players"].append(st.session_state.my_name)
+            room_ref = st.session_state.global_rooms[st.session_state.my_room]
+            
+            if st.session_state.my_name not in room_ref["players"]:
+                room_ref["players"].append(st.session_state.my_name)
+            
+            # Назначаем создателя комнаты (Хоста)
+            if not room_ref["host"]:
+                room_ref["host"] = st.session_state.my_name
             
             st.rerun()
         else:
@@ -52,13 +71,16 @@ if not st.session_state.my_name:
 else:
     room_id = st.session_state.my_room
     if room_id not in st.session_state.global_rooms:
-        st.session_state.global_rooms[room_id] = {"players": [st.session_state.my_name], "bots": [], "stage": "lobby", "game_mode": "Обычный плакат", "idea": "", "canvas_data": None, "timer_start": None}
+        st.session_state.global_rooms[room_id] = {"players": [st.session_state.my_name], "host": st.session_state.my_name, "bots": [], "stage": "lobby", "game_mode": "Обычный плакат", "idea": "", "canvas_data": None, "timer_start": None}
         
     room_data = st.session_state.global_rooms[room_id]
     
     if st.sidebar.button("🚪 Выйти"):
         if st.session_state.my_name in room_data["players"]:
             room_data["players"].remove(st.session_state.my_name)
+        # Если вышел хост, переназначаем его на следующего игрока
+        if room_data["host"] == st.session_state.my_name:
+            room_data["host"] = room_data["players"][0] if room_data["players"] else ""
         st.session_state.my_name = ""
         st.query_params.clear()
         st.rerun()
@@ -70,44 +92,55 @@ else:
             mins, secs = divmod(remaining, 60)
             st.sidebar.metric("⏱️ Оставшееся время", f"{mins:02d}:{secs:02d}")
             if remaining == 0:
-                st.sidebar.warning("Время вышло! Нажмите кнопку перехода.")
+                st.sidebar.warning("Время вышло! Переходим дальше.")
 
     # --- 1. ЛОББИ ---
     if room_data["stage"] == "lobby":
         st.title("🎭 Лобби игры")
         st.write(f"Вы в комнате: **{room_id}**")
+        st.write(f"👑 Создатель комнаты: **{room_data['host']}**")
         
-        # 🔥 ПОЛНОСТЬЮ АВТОМАТИЧЕСКАЯ ССЫЛКА БЕЗ ЖЕСТКОГО ТЕКСТА
-        # Берем чистый домен из адресной строки через st.query_params
         st.query_params["room"] = room_id
-        invite_link = "Скопируйте адресную строку вашего браузера вверху страницы!"
-        
-        st.info("📢 Чтобы позвать друга в эту комнату, просто **скопируйте всю ссылку из адресной строки вашего браузера** (в самом верху экрана) и отправьте ему!")
-        st.text_input("🔗 Номер текущей комнаты для проверки:", value=room_id, disabled=True)
+        st.info("📢 Чтобы позвать друга в эту комнату, скопируйте всю ссылку из адресной строки вашего браузера на самом верху экрана!")
         
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("👥 Участники:")
             for p in room_data["players"]:
-                st.markdown(f"👤 **{p}**")
-            if st.button("🔄 Обновить список"):
+                if p == room_data["host"]:
+                    st.markdown(f"👤 **{p}** 👑 *(Создатель)*")
+                else:
+                    st.markdown(f"👤 **{p}**")
+            if st.button("🔄 Обновить список игроков"):
                 st.rerun()
                 
         with col2:
             st.subheader("Настройки раунда")
-            room_data["game_mode"] = st.radio("Режим игры:", ["Обычный плакат", "Слепой плагиат", "Тайный исказитель"])
-            st.info("⏱️ Время на раунд: 5 минут.")
             
-            if st.button("НАЧАТЬ ИГРУ 🚀", type="primary"):
-                total_players = len(room_data["players"])
-                if total_players % 2 != 0:
-                    room_data["bots"] = ["Бот-Ассистент"]
-                else:
-                    room_data["bots"] = []
-                    
-                room_data["stage"] = "round_1"
-                room_data["timer_start"] = time.time()
-                st.rerun()
+            # Настройки режима может менять только Создатель
+            if st.session_state.my_name == room_data["host"]:
+                room_data["game_mode"] = st.radio("Режим игры:", ["Обычный плакат", "Слепой плагиат", "Тайный исказитель"])
+                st.info("⏱️ Время на раунд: 5 минут.")
+                
+                if st.button("НАЧАТЬ ИГРУ 🚀", type="primary"):
+                    total_players = len(room_data["players"])
+                    if total_players % 2 != 0:
+                        room_data["bots"] = ["Бот-Ассистент"]
+                    else:
+                        room_data["bots"] = []
+                        
+                    room_data["stage"] = "round_1"
+                    room_data["timer_start"] = time.time()
+                    st.rerun()
+            else:
+                # Что видят обычные зашедшие гости
+                st.markdown(f"**Выбранный режим:** {room_data['game_mode']}")
+                st.info("⏱️ Время на раунд: 5 минут.")
+                st.warning("⏳ Ожидание, пока создатель комнаты запустит игру...")
+                
+                # Кнопка ручного обновления для гостей, чтобы увидеть старт игры хостом
+                if st.button("🔄 Проверить старт игры"):
+                    st.rerun()
 
     # --- 2. РАУНД 1: ЛОЗУНГ ---
     elif room_data["stage"] == "round_1":
@@ -170,7 +203,7 @@ else:
             room_data["stage"] = "final"
             st.rerun()
 
-    # --- 5. ФИНАЛ: ДЕМОНСТРАЦИЯ РЕЗУЛЬТАТОВ ГАРТИК ФОН ---
+    # --- 5. ФИНАЛ: ДЕМОНСТРАЦИЯ РЕЗУЛЬТАТОВ ---
     elif room_data["stage"] == "final":
         st.title("🎬 Результаты игры")
         st.subheader(f"Режим проведения: {room_data['game_mode']}")
