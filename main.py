@@ -5,8 +5,7 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Сломанный Плакат — ИП", layout="wide")
 
-# --- СЕРВЕРНАЯ ПАМЯТЬ ДЛЯ МИЛЛИОНА КОМНАТ ---
-# Память хранится на сервере. Все игроки с одним room_id видят общую комнату.
+# --- СЕРВЕРНАЯ ПАМЯТЬ ДЛЯ ВСЕХ КОМНАТ ---
 if "global_rooms" not in st.session_state:
     st.session_state.global_rooms = {}
 
@@ -85,9 +84,10 @@ else:
         st.title("🎭 Игровое лобби сессии")
         st.write(f"Привет, **{st.session_state.my_name}**! Вы находитесь в изолированной комнате № **{room_id}**.")
         
-        # Ссылка для миллиона игроков (каждая комната уникальна)
+        # Исправленная генерация динамической ссылки
         invite_link = f"https://streamlit.app{room_id}"
-        st.text_input("🔗 Ссылка для друзей в эту комнату (ИП):", value=invite_link, disabled=True)
+        st.text_input("🔗 Ссылка для друзей в эту комнату (ИП):", value=invite_link)
+        st.caption("Выделите текст выше и нажмите Ctrl+C, чтобы скопировать ссылку другу.")
         
         col1, col2 = st.columns(2)
         with col1:
