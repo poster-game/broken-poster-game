@@ -17,9 +17,9 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-# --- СЕРВЕРНАЯ ПАМЯТЬ ДЛЯ ВСЕХ КОМНАТ ---
-if "global_rooms" not in st.session_state:
-    st.session_state.global_rooms = {}
+# 🔥 НАСТОЯЩАЯ ГЛОБАЛЬНАЯ ПАМЯТЬ СЕРВЕРА (вне сессий браузера)
+if not hasattr(st, "_global_game_rooms"):
+    st._global_game_rooms = {}
 
 if "my_name" not in st.session_state:
     st.session_state.my_name = ""
@@ -39,11 +39,15 @@ if not st.session_state.my_name:
     
     if st.button("ВОЙТИ 🚀", type="primary"):
         if name_input.strip():
-            st.session_state.my_name = name_input.strip()
-            st.session_state.my_room = room_input.strip()
+            user_name = name_input.strip()
+            room_id = room_input.strip()
             
-            if st.session_state.my_room not in st.session_state.global_rooms:
-                st.session_state.global_rooms[st.session_state.my_room] = {
+            st.session_state.my_name = user_name
+            st.session_state.my_room = room_id
+            
+            # Инициализация комнаты на сервере
+            if room_id not in st._global_game_rooms:
+                st._global_game_rooms[room_id] = {
                     "players": [],
                     "bots": [],
                     "stage": "lobby",
@@ -53,10 +57,8 @@ if not st.session_state.my_name:
                     "timer_start": None
                 }
             
-            room_ref = st.session_state.global_rooms[st.session_state.my_room]
-            
-            if name_input.strip() not in room_ref["players"]:
-                room_ref["players"].append(name_input.strip())
+            if user_name not in st._global_game_rooms[room_id]["players"]:
+                st._global_game_rooms[room_id]["players"].append(user_name)
             
             st.rerun()
         else:
@@ -65,12 +67,14 @@ if not st.session_state.my_name:
 # --- ИГРОВОЙ ИНТЕРФЕЙС ---
 else:
     room_id = st.session_state.my_room
-    if room_id not in st.session_state.global_rooms:
-        st.session_state.global_rooms[room_id] = {"players": [st.session_state.my_name], "bots": [], "stage": "lobby", "game_mode": "Обычный плакат", "idea": "", "canvas_data": None, "timer_start": None}
-        
-    room_data = st.session_state.global_rooms[room_id]
     
-    # Железное определение хоста: самый первый в списке игроков
+    # Защита от сброса
+    if room_id not in st._global_game_rooms:
+        st._global_game_rooms[room_id] = {"players": [st.session_state.my_name], "bots": [], "stage": "lobby", "game_mode": "Обычный плакат", "idea": "", "canvas_data": None, "timer_start": None}
+        
+    room_data = st._global_game_rooms[room_id]
+    
+    # Железный создатель: самый первый в списке на сервере
     if room_data["players"]:
         current_host = room_data["players"][0]
     else:
@@ -113,7 +117,7 @@ else:
         with col2:
             st.subheader("Настройки раунда")
             
-            # Проверка прав: Кнопка старта и настройки ТОЛЬКО для реального создателя
+            # Проверка прав создателя
             if st.session_state.my_name == current_host:
                 room_data["game_mode"] = st.radio("Режим игры:", ["Обычный плакат", "Слепой плагиат", "Тайный исказитель"])
                 st.info("⏱️ Время на раунд: 5 минут.")
@@ -129,7 +133,6 @@ else:
                     room_data["timer_start"] = time.time()
                     st.rerun()
             else:
-                # Что видят все остальные зашедшие гости
                 st.markdown(f"**Выбранный режим:** {room_data['game_mode']}")
                 st.info("⏱️ Время на раунд: 5 минут.")
                 st.warning("⏳ Ожидание, пока создатель комнаты запустит игру...")
